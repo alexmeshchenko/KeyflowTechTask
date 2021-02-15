@@ -1,0 +1,385 @@
+openapi: 3.0.0
+
+info:
+  title: Consumer API
+  description: >-
+    The Consumer API (CAPI) provides all the functionality needed to implement the services offered in the Keyflow Guest app.
+
+    ## Requests
+
+    The API expects a JSON payload when requesting POST and PUT endpoints. For an endpoint documentation, the parameter heading explains the parameters that need to be passed. Optional parameters are explicitly specified. Please note a JSON object is not required for a GET request
+
+    ## Response
+
+    The API always returns an enveloped JSON object containing the resources or a collection that is requested under a generic key "data". An example success response is given below. The response code of a successful call is always HTTP 200 and contains the same code in the JSON response object. A bad call will return HTTP 40x with a JSON error response.
+
+    ## Pagination
+
+    Please note that this feature was added quite recent and might not be available in all APIs. If paging is enabled, the response object will contain an additional field pagination.
+
+  contact: {}
+  version: "1.0"
+servers:
+  - url: https://stage-api.keyflow.com/capi/
+    variables: {}
+paths:
+  /v4/events:
+    get:
+      security: []
+      tags:
+        - Events
+      summary: Get Events by location
+      description: "Return all events including recommendation and hot events."
+      operationId: GetEventsbylocation
+      parameters:
+        - name: long
+          in: query
+          description: "A floating-point numbers representing longitude (decimal degrees)."
+          required: true
+          style: simple
+          schema:
+            type: number
+            format: double
+            example: 59.335392700000007
+        - name: lat
+          in: query
+          description: "A floating-point numbers representing latitude (decimal degrees)."
+          required: true
+          style: simple
+          schema:
+            type: number
+            format: double
+            example: 18.073795000000018
+        - name: placeId
+          in: query
+          description: "A string from google to uniquely identify a city. It is strongly recommended to also provide long & lat at the same time when using this param."
+          required: true
+          style: simple
+          schema:
+            type: string
+            example: ChIJywtkGTF2X0YRZnedZ9MnDag
+        - name: locationRadius
+          in: query
+          description: "The range of a circle with locationCoordinates as center and locationRadius as radius in kilometers and 200 KM will be used if not given."
+          required: true
+          style: simple
+          schema:
+            type: number
+            format: double
+            example: 20
+        - name: pageNumber
+          in: query
+          description: "Page number, default first page if not given."
+          required: true
+          style: simple
+          schema:
+            type: integer
+            example: 1
+        - name: pageSize
+          in: query
+          description: "Page size, default 50 per page if not given."
+          required: true
+          style: simple
+          schema:
+            type: integer
+            example: 50
+      responses:
+        200:
+          content:
+            application/json; charset=UTF-8:
+              schema:
+                required:
+                  - status
+                  - data
+                type: object
+                properties:
+                  status:
+                    type: integer
+                    example: 200
+                  data:
+                    required:
+                      - biddableItems
+                    type: object
+                    properties:
+                      recommendedEventIds:
+                        type: array
+                        items:
+                          type: integer
+                      hotEventIds:
+                        type: array
+                        items:
+                          type: integer
+                      discoverEventIds:
+                        type: array
+                        items:
+                          type: integer
+
+                      events:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/EventPartialResponseSchema"
+                        description:
+                          "NOTE: Only the following event fields are returned here: - id
+                          - venueId
+                          - name
+                          - startTime
+                          - endTime
+                          - tickets
+                          - atmosphereIdArray
+                          - musicIdArray"
+                      venues:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/VenuePartialResponseSchema"
+                        description:
+                          "NOTE: Only the following venue schema fields will be returned in this endpoint:
+                          - venueId
+                          - venueDescription
+                          - venueLocation
+                          - venueName
+                          - venueImages
+                          - venueLogo
+                          - venueWebsite
+                          - venuePhone
+                          - venueAtmosphere
+                          - venueMusic
+                          - venueTZ
+                          - venueDoorPolicy
+                          - keyflowCityId
+                          - venueUrl
+                          - venueSortRank
+                          - venueLegalDisclaimerReceipt"
+
+                      biddableItems:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/keyflow.core.model.serializer.biddable_items_schema.BiddableItemSchema"
+
+components:
+  schemas:
+    keyflow.core.model.serializer.biddable_items_schema.BiddableItemSchema:
+      properties:
+        createdAt: { format: date-time, type: string }
+        defaultIndexBidAmount: { format: int32, type: integer }
+        iconUrl: { format: url, type: string }
+        id: { format: int32, type: integer }
+        kfChargeOnlyReservationFee: { type: boolean }
+        name: { type: string }
+        presetBidAmountPreset: { readOnly: true }
+        purchaseInstructions: { type: string }
+        recommendedIndexBidAmount: { format: int32, type: integer }
+      type: object
+    EventPartialResponseSchema:
+      title: EventPartialResponseSchema
+      type: object
+      properties:
+        venueId:
+          {
+            description: Connected Venue ID,
+            example: 1,
+            format: int32,
+            type: integer,
+          }
+        name:
+          {
+            description: Name of the event,
+            example: Lorien Guided Tour Duplicate,
+            type: string,
+          }
+        startTime: { example: "2020-02-01T22:01:00+00:00", type: string }
+        endTime: { example: "2020-02-01T22:01:00+00:00", type: string }
+        tickets:
+          items:
+            $ref: "#/components/schemas/keyflow.core.model.serializer.event_schema.TicketSchema"
+          type: array
+        atmosphereIdArray:
+          items: { format: int32, type: integer }
+          type: array
+        musicIdArray:
+          items: { format: int32, type: integer }
+          type: array
+        music:
+          description: Array of music strings
+          example:
+            [ Deep House, Commercial House, House, Techno, Hip Hop, Dance Music ]
+          readOnly: true
+        vipCardStatus:
+          description: IGNORE
+          items:
+            $ref: "#/components/schemas/keyflow.core.model.serializer.v3.event_schema_v3.VipCardStatusSchema"
+          readOnly: true
+          type: array
+        images:
+          description: List of image strings
+          example:
+            [
+                venue/266/event/2506/BASE_Dubai_event_Monday_Vibes___BASE_Dubai____Every_Mondayc542c034ab6665edbe26a47dfc9d62da,
+            ]
+          items: { type: string }
+          type: array
+        sentTickets:
+          description: IGNORE
+          readOnly: true
+          type: array
+        minimumAge: { format: int32, type: integer }
+        eventLegalDisclaimerReceipt:
+          { description: Event disclaimer., example: The
+                                              venue reserves the right to refuse drunk guests., type: string }
+        description: { description: A description of the event., type: string }
+
+    keyflow.core.model.serializer.v3.event_schema_v3.VipCardStatusSchema:
+      properties:
+        cardHolderPaysTicket: { readOnly: true, type: boolean }
+        freeRemaining: { format: int32, readOnly: true, type: integer }
+        payRemaining: { format: int32, readOnly: true, type: integer }
+        ticketId: { format: int32, readOnly: true, type: integer }
+        vipCardId: { format: int32, readOnly: true, type: integer }
+      type: object
+    keyflow.core.model.serializer.venue_schema.VenueLocationSchema:
+      properties:
+        locationAddress: { type: string }
+        locationCity: { type: string }
+        locationCoordinates:
+          items: { type: number }
+          type: array
+        locationCountry: { type: string }
+        locationCountryCode: { type: string }
+        locationPlaceID: { type: string }
+        locationReference: { type: string }
+        locationZoom: { format: int32, type: integer }
+      type: object
+
+    keyflow.core.model.serializer.drinktable_schema.DrinkTableExtraParametersSchema:
+      properties:
+          additionalGuests: { format: int32, type: integer }
+          tableRestrictions: { type: string }
+      type: object
+
+    keyflow.core.model.serializer.event_schema.TicketSchema:
+      properties:
+        bookingFee:
+          {
+            description: The booking fee per ticket. In cents.,
+            format: int32,
+            readOnly: true,
+            type: integer,
+          }
+        color:
+          {
+            description: Ticket guest list RGB representation.,
+            example: "#fbgaff",
+          }
+        currency:
+          { description: The ticket currency., example: EUR, type: string }
+        description: { type: string }
+        drinkTableId:
+          { description: "If this is a drinktable, this is a reference
+              to the drink table id setup in the venue.", format: int32, type: integer }
+        enabled:
+          {
+            description: Flags whether ticket is available for purchase.,
+            type: boolean,
+          }
+        extraParameters:
+          {
+            $ref: "#/components/schemas/keyflow.core.model.serializer.drinktable_schema.DrinkTableExtraParametersSchema",
+          }
+        guestListId: { format: int32, type: integer }
+        guestPlus: { description: Deprecated., type: number }
+        id: { format: int32, type: integer }
+        lastEntryTime: { example: "2020-02-01T22:01:00+00:00", type: string }
+        price:
+          {
+            description: The ticket price in cents.,
+            format: int32,
+            type: integer,
+          }
+        priceBeforeTax:
+          {
+            description: The ticket price without tax in cents.,
+            format: int32,
+            readOnly: true,
+            type: integer,
+          }
+        priceTax:
+          {
+            description: The amount of tax per ticket in cents.,
+            format: int32,
+            readOnly: true,
+            type: integer,
+          }
+        quantity:
+          {
+            description: The number of tickets put out for sale.,
+            format: int32,
+            type: integer,
+          }
+        saleEnd: { example: "2020-02-01T22:01:00+00:00", type: string }
+        saleStart: { example: "2020-02-01T22:01:00+00:00", type: string }
+        soldOut:
+          { description: Flags whether this ticket has been sold out or if there
+              are any tickets lets, readOnly: true }
+        taxName: { description: Tax display name., example: VAT, type: string }
+        taxRatio: { description: Tax amount (%)., format: float, type: number }
+        taxStrategy:
+          { description: Tax settings. This controls how we display and
+              charge tax on purchases., example: INCLUDED|ON-TOP|TAX-FREE, readOnly: true, type: string }
+        ticketsSold:
+          {
+            description: The number of tickets sold to this date.,
+            readOnly: true,
+          }
+        title: { type: string }
+        totalPrice:
+          { description: The total price for this ticket in cents (price
+              + bookingfee). This is the amount a guest is charged per ticket., readOnly: true }
+        type:
+          {
+            description: Ticket type. (type 'campaign' has been deprecated.),
+            example: ticket|campaign|vip|drinktable,
+            type: string,
+          }
+        vipFreeEntry:
+          {
+            description: Flags whether VIP card holders go for free.,
+            type: boolean,
+          }
+      required: [enabled, saleEnd, saleStart, title, type]
+      type: object
+    VenuePartialResponseSchema:
+      title: VenuePartialResponseSchema
+      type: object
+      properties:
+        venueDescription: { type: string }
+        venueName: { type: string }
+        venueEmail: { format: email, type: string }
+        venueWebsite: { type: string }
+        venueLocation:
+          {
+            $ref: "#/components/schemas/keyflow.core.model.serializer.venue_schema.VenueLocationSchema",
+          }
+        venueImages:
+          items: { type: string }
+          type: array
+        venueLogo: { type: string }
+        venuePhone: { type: string }
+        venueAtmosphere:
+          items: { type: string }
+          type: array
+        venueMusic:
+          items: { type: string }
+          type: array
+
+        venueTZ: { type: string }
+        keyflowCityId: { format: int32, readOnly: true, type: integer }
+        venueDoorPolicy: { type: string }
+        venueId: { format: int32, readOnly: true, type: integer }
+        venueSortRank: { format: int32, readOnly: true, type: integer }
+        venueUrl: { readOnly: true }
+        venueLegalDisclaimerReceipt: { type: string }
+        accountCurrency: { type: string }
+        venueRglInfoMessage: { type: string }
+        venueRglInfoColor: { type: string }
+        venueBidRateMessage: { type: string }
+        venueBidTimeMessage: { type: string }
+      required: [ venueName ]
